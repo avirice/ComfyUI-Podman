@@ -1,0 +1,4 @@
+*.safetensors
+*.ckpt
+models/
+output/
