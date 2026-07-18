@@ -57,8 +57,8 @@ RDNA 3.5 cards also need `HIP_VISIBLE_DEVICES=0`, add it as an extra
 
 | Architecture | Example GPU | Compatible |
 |---|---|---|
-| Blackwell/Hopper/Ada/Ampere/Turing | RTX 5090, H100, RTX 4090, RTX 3090, RTX 2080 | cu130 ✅ |
-| Volta and older (Pascal, Maxwell) | TITAN V, GTX 1080/980 | not supported — edit `Containerfile.nvidia` to use `cu126` before building |
+| Blackwell/Hopper/Lovelace/Ampere/Turing | RTX 5090, H100, RTX 4090, RTX 3090, RTX 2080, GTX 1660 | cu130, cu132 |
+| Volta, Pascal, Maxwell | TITAN V, GTX 1080, GTX 980 | cu126 |
 
 ## Optional environment variables
 
