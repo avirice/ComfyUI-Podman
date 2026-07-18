@@ -31,22 +31,12 @@ Self-built ComfyUI containers from official sources only — AMD's `rocm-termina
 - NVIDIA drivers installed on host
 - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) configured
 
----
-
-> ℹ️ After installation, this folder can be deleted. Manage the service with:
->
-> ```bash
-> systemctl --user start comfyui
-> systemctl --user stop comfyui
-> systemctl --user status comfyui
-> journalctl --user -u comfyui -f
-> ```
-
 ## Clone
 
 ```bash
 git clone https://github.com/avirice/ComfyUI-Podman.git
 cd ComfyUI-Podman
+mkdir -p ~/.config/containers/systemd
 ```
 
 ## Install — Make (recommended)
@@ -61,20 +51,36 @@ make install-amd HSA=VALUE
 ```bash
 make install-nvidia
 ```
-## Install —
+## Install — Manual
 
-1. Clone this repo:
-
-git clone
-cd comfyui-podman
-
-2. Build the image:
-
+**AMD**
+```bash
 podman build -f Containerfile.amd -t comfyui .
+sed 's/__HSA_VERSION__/VALUE/' comfyui.container.amd >
+~/.config/containers/systemd/comfyui.container
+systemctl --user daemon-reload
+# Replace `VALUE` with your card's value from the table below
+```
 
-3. Find your 'HSA_OVERRIDE_GFX_VERSION' in the table below, then copy the quadlet with your value filled in:
+**NVIDIA**
+```bash
+podman build -f Containerfile.nvidia -t comfyui .
+cp comfyui.container.nvidia ~/.config/containers/systemd/comfyui.container
+systemctl --user daemon-reload
+```
 
-Open `http://localhost:8188` once started.
+## Start
+
+Once installed, this folder can be deleted, as the image and quadlet live outside it.
+
+```bash
+systemctl --user start comfyui    # start
+systemctl --user stop comfyui     # stop
+systemctl --user status comfyui   # check status
+journalctl --user -u comfyui -f   # check logs
+```
+
+ComfyUI available at `http://localhost:8188`
 ## AMD: HSA_OVERRIDE_GFX_VERSION
 
 | Architecture       | Value    | Cards                                                    |
