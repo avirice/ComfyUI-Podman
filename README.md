@@ -1,33 +1,71 @@
-# ComfyUI Podman Quadlet (AMD + Nvidia)
+# ComfyUI Podman (AMD + NVIDIA)
 
-Self-built ComfyUI containers from official sources only:
-    AMD's 'rocm-terminal' + PyTorch official wheels + official 'comfy-cli'.
-    No third-party prebuilt images.
+Self-built ComfyUI containers from official sources only — AMD's `rocm-terminal`, Nvidia's base `cuda:ubuntu`, plus PyTorch's official wheels and official `comfy-cli`. No third-party prebuilt images.
 
-## Compatability
+**Hardened:** Read-only root filesystem, all Linux capabilities dropped, SELinux confinement (`container_runtime_t`). Only the specific paths ComfyUI needs are writable while everything else is locked or tmpfs.
+## Compatibility
 
-Requires **Linux with systemd** (podman quadlets initialize comfyui as a systemd service).
-
+| OS      | Support                                       |
+| ------- | --------------------------------------------- |
+| Linux   | ✅ Tested on Fedora, should work on any distro |
+| Windows | ⚠️ Untested, needs WSL                        |
+| macOS   | ❓ Unknown                                     |
 ## Prerequisites
 
-**AMD**
--   'amdgpu' kernel module installed and loaded on host
--   Your user in the 'video' and 'render' groups:
-        sudo usermod -aG video,render $(whoami)
+### Common
 
-    Log out and back in afterward
+- **Podman**: [install guide](https://podman.io/docs/installation) (all platforms)
+- **Make** *(optional, for the Make install path)*, usually preinstalled on Linux; check with:
+	`make --version`
+### AMD
 
-- Check that your GPU is supported: [ROCm supported GPUs] (https://rocm.docs.amd.com/en/latest/compatibility/compatibility-matrix.html?fam=radeon&w=compute&gpu=v620&gfx=gfx1030&os=ubuntu)
+- `amdgpu` kernel module loaded on host
+- Your user in the `video` and `render` groups:
+	```bash
+	sudo usermod -aG video,render $(whoami)
+	# Log out and back in after groups are added
+	```
+
+### NVIDIA
+
+- NVIDIA drivers installed on host
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) configured
+
+---
+
+> ℹ️ After installation, this folder can be deleted. Manage the service with:
+>
+> ```bash
+> systemctl --user start comfyui
+> systemctl --user stop comfyui
+> systemctl --user status comfyui
+> journalctl --user -u comfyui -f
+> ```
+
+## Clone
+
+```bash
+git clone https://github.com/avirice/ComfyUI-Podman.git
+cd ComfyUI-Podman
+```
+
+## Install — Make (recommended)
+
+**AMD**: Find your `HSA_OVERRIDE_GFX_VERSION` in the table below
+
+```bash
+make install-amd HSA=VALUE
+```
 
 **NVIDIA**
--   NVIDIA driver installed on host
--   NVIDIA Container Toolkit configured for CDI: [NVIDIA Container Toolkit] (https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-
-## Install - AMD
+```bash
+make install-nvidia
+```
+## Install —
 
 1. Clone this repo:
 
-git clone <this-repo>
+git clone
 cd comfyui-podman
 
 2. Build the image:
@@ -37,18 +75,17 @@ podman build -f Containerfile.amd -t comfyui .
 3. Find your 'HSA_OVERRIDE_GFX_VERSION' in the table below, then copy the quadlet with your value filled in:
 
 Open `http://localhost:8188` once started.
-
 ## AMD: HSA_OVERRIDE_GFX_VERSION
 
-| Architecture | Value | Cards |
-|---|---|---|
-| RDNA 4 (gfx1201) | `12.0.1` | Radeon AI PRO R9700, Radeon RX 9070/9070 XT/9070 GRE |
-| RDNA 4 (gfx1200) | `12.0.0` | Radeon RX 9060/9060 XT |
-| RDNA 3.5 (gfx1151) | `11.5.1` | Ryzen AI Max+ 395/390/385 |
-| RDNA 3.5 (gfx1150) | `11.5.0` | Ryzen AI 9 HX 375/370/365 |
-| RDNA 3 (gfx1101) | `11.0.1` | Radeon RX 7700 XT/7800 XT, Radeon PRO W7700/V710 |
-| RDNA 3 (gfx1100) | `11.0.0` | Radeon RX 7900 XT/XTX/GRE, Radeon PRO W7900/W7800 |
-| RDNA 2 (gfx1030) | `10.3.0` | Radeon PRO W6800/V620 (RX 6000 unofficial, may not work) |
+| Architecture       | Value    | Cards                                                    |
+| ------------------ | -------- | -------------------------------------------------------- |
+| RDNA 4 (gfx1201)   | `12.0.1` | Radeon AI PRO R9700, Radeon RX 9070/9070 XT/9070 GRE     |
+| RDNA 4 (gfx1200)   | `12.0.0` | Radeon RX 9060/9060 XT                                   |
+| RDNA 3.5 (gfx1151) | `11.5.1` | Ryzen AI Max+ 395/390/385                                |
+| RDNA 3.5 (gfx1150) | `11.5.0` | Ryzen AI 9 HX 375/370/365                                |
+| RDNA 3 (gfx1101)   | `11.0.1` | Radeon RX 7700 XT/7800 XT, Radeon PRO W7700/V710         |
+| RDNA 3 (gfx1100)   | `11.0.0` | Radeon RX 7900 XT/XTX/GRE, Radeon PRO W7900/W7800        |
+| RDNA 2 (gfx1030)   | `10.3.0` | Radeon PRO W6800/V620 (RX 6000 unofficial, may not work) |
 
 RDNA 3.5 cards also need `HIP_VISIBLE_DEVICES=0`, add it as an extra 
 `Environment=` line in the quadlet before or after copying it.
@@ -74,18 +111,14 @@ After editing: `systemctl --user daemon-reload` then restart the service.
 
 ## Notes
 
-- Podman volumes typically stored at ~/.local/share/containers/storage/volumes/
-- Models/output/workflows persist in named podman volumes. Everything
-  else is read-only or tmpfs by design.
-- LAN-only by default. Do not port-forward to the internet, ComfyUI has
-  no built-in authentication.
+- Podman volumes live at `~/.local/share/containers/storage/volumes/`
 - No models bundled in the image, download into the `comfyui-models`
   volume after first start.
 
 ## Status
 
-AMD path tested and confirmed working. NVIDIA path written with same pattern but not yet run against real NVIDIA hardware (feedback and PRs needed).
-
+* AMD path tested and confirmed working. NVIDIA path written with same pattern but not yet run against real NVIDIA hardware (feedback and PRs needed).
+* Windows not tested
 ## Roadmap
 
 - CPU-only support
